@@ -1,7 +1,6 @@
 ---
 import { Image } from 'astro:assets'
-
-import config from '@/site-config'
+import { t } from '@/i18n'
 
 interface AvatarCache {
   hash: string
@@ -35,7 +34,7 @@ interface Props {
 const { title, list: friendList, ...props } = Astro.props
 
 const getAvatarSrc = (friend: friend) =>
-  (config.integ?.links?.cacheAvatar ?? false) ? (friend.avatar_cache?.path ?? friend.avatar) : friend.avatar
+  friend.avatar_cache?.path ?? friend.avatar
 ---
 
 {title && <h2 id={friendList.id_name}>{title}</h2>}
@@ -110,7 +109,7 @@ const getAvatarSrc = (friend: friend) =>
         </a>
       ))
     ) : (
-      <p>Nothing here.</p>
+      <p data-i18n='friendList.empty'>{t('friendList.empty')}</p>
     )
   }
 </div>

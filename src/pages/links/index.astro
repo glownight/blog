@@ -2,74 +2,108 @@
 import links from 'public/links.json'
 import config from 'virtual:config'
 
-import { Collapse, Timeline, Signature } from 'astro-pure/user'
+import { Collapse, Timeline } from 'astro-pure/user'
+import { DEFAULT_LOCALE, MESSAGES, t } from '@/i18n'
 import PageLayout from '@/layouts/CommonPage.astro'
 import FriendList from '@/components/links/FriendList.astro'
 
 const headings = [
-  { depth: 2, slug: 'common-links', text: 'Common Links' },
-  { depth: 2, slug: 'special-links', text: 'Special Links' },
-  { depth: 2, slug: 'apply-links', text: 'Apply Links' },
-  { depth: 2, slug: 'friend-circle', text: 'Friend Circle' }
+  { depth: 2, slug: 'common-links', text: t('links.sectionCommon') },
+  { depth: 2, slug: 'special-links', text: t('links.sectionSpecial') },
+  { depth: 2, slug: 'apply-links', text: t('links.sectionApply') },
+  { depth: 2, slug: 'friend-circle', text: t('links.sectionCircle') }
 ]
 
 const { friends } = links
 const linksConf = config.integ.links
-const linkEditPage = 'https://github.com/cworld1/astro-theme-pure/blob/main/public/links.json'
 ---
 
-<PageLayout title='Links' {headings} comment>
-  <p>怎么可能有顺序呢，当然是随机的~ It's random</p>
-  <h2 id='common-links'>Common Links</h2>
+<PageLayout title={t('links.title')} titleI18nKey='links.title' {headings} comment>
+  <p data-i18n='links.randomHint'>{t('links.randomHint')}</p>
+
+  <h2 id='common-links' data-i18n='links.sectionCommon'>{t('links.sectionCommon')}</h2>
   <FriendList list={friends[0]} />
-  <Collapse title='Links with Bad Status'>
+
+  <Collapse
+    title={t('links.badStatusTitle')}
+    data-i18n='links.badStatusTitle'
+    data-i18n-target='.expand-title p'
+  >
     <FriendList list={friends[1]} />
   </Collapse>
-  <Collapse title='Link History Book'>
+
+  <Collapse
+    title={t('links.historyTitle')}
+    data-i18n='links.historyTitle'
+    data-i18n-target='.expand-title p'
+  >
     <Timeline events={linksConf.logbook} />
   </Collapse>
-  <h2 id='special-links'>Special Links</h2>
+
+  <h2 id='special-links' data-i18n='links.sectionSpecial'>{t('links.sectionSpecial')}</h2>
   <FriendList list={friends[2]} />
 
-  <!-- apply-links -->
-  <h2 id='apply-links'>Apply Links</h2>
-  <p>本站信息（点击复制）The site information (click to copy)：</p>
+  <h2 id='apply-links' data-i18n='links.sectionApply'>{t('links.sectionApply')}</h2>
+  <p data-i18n='links.siteInfoIntro'>{t('links.siteInfoIntro')}</p>
+
   <blockquote class='not-prose grid grid-cols-[auto_1fr] gap-x-2 break-words border-s-4 ps-4'>
     {
-      linksConf.applyTip.map(({ name, val }) => {
-        const script = `navigator.clipboard.writeText('${val}');document.dispatchEvent(new CustomEvent('toast',{detail:{message:'Copied "${val}" to clipboard!'}}))`
-        return (
-          <>
-            <span class='text-end'>{name}:</span>
-            <samp class='cursor-pointer' onclick={script}>
-              {val}
-            </samp>
-          </>
-        )
-      })
+      linksConf.applyTip.map(({ name, val }) => (
+        <>
+          <span class='text-end'>{name}:</span>
+          <samp class='cursor-pointer' data-copy-value={val}>
+            {val}
+          </samp>
+        </>
+      ))
     }
   </blockquote>
 
-  <p>申请时还请按照这个模板留言，此外有关申请说明：</p>
+  <p data-i18n='links.applyIntro'>{t('links.applyIntro')}</p>
   <ul>
-    <li>在你的友链上添加了本站. You've recommended this site on your website.</li>
-    <li>请确保你的站点活着. Make sure your site is alive.</li>
-    <li>博客内容不违反国家法律. Content does not violate common laws.</li>
+    <li data-i18n='links.ruleRecommended'>{t('links.ruleRecommended')}</li>
+    <li data-i18n='links.ruleAlive'>{t('links.ruleAlive')}</li>
+    <li data-i18n='links.ruleLegal'>{t('links.ruleLegal')}</li>
   </ul>
-  <h2 id='friend-circle'>Friend Circle</h2>
-  <div id='friend-circle-lite-root' class='not-prose'>Loading...</div>
-  <script>
-    import '@/assets/styles/fc.css'
 
+  <h2 id='friend-circle' data-i18n='links.sectionCircle'>{t('links.sectionCircle')}</h2>
+  <div id='friend-circle-lite-root' class='not-prose' data-i18n='links.loading'>
+    {t('links.loading')}
+  </div>
+
+  <script is:inline define:vars={{ defaultLocale: DEFAULT_LOCALE, messages: MESSAGES }}>
+    import '@/assets/styles/fc.css'
     import { FriendCircle } from '@/plugins/friend-circle'
+
+    function getMessage(locale, key) {
+      const localeMessages = messages[locale] || messages[defaultLocale] || {}
+      const fallbackMessages = messages[defaultLocale] || {}
+      return localeMessages[key] || fallbackMessages[key] || key
+    }
+
+    function formatMessage(template, vars = {}) {
+      return template.replace(/\{\{(\w+)\}\}/g, (_, varName) => `${vars[varName] ?? ''}`)
+    }
+
+    document.querySelectorAll<HTMLElement>('[data-copy-value]').forEach((el) => {
+      el.addEventListener('click', async () => {
+        const value = el.dataset.copyValue || ''
+        if (!value) return
+
+        await navigator.clipboard.writeText(value)
+
+        const locale = document.documentElement.getAttribute('data-locale') || defaultLocale
+        const message = formatMessage(getMessage(locale, 'links.copyToClipboard'), { value })
+        document.dispatchEvent(new CustomEvent('toast', { detail: { message } }))
+      })
+    })
 
     const fc = new FriendCircle()
     fc.init({
-      private_api_url: 'https://friends.arthals.ink/',
+      private_api_url: 'https://friends.glownight/',
       page_turning_number: 10,
       error_img: 'https://cravatar.cn/avatar/57d8260dfb55501c37dde588e7c3852c'
     })
     fc.load()
   </script>
-  {config.signature && <Signature />}
 </PageLayout>

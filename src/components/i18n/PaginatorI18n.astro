@@ -1,0 +1,43 @@
+---
+import { t } from '@/i18n'
+
+type PaginationLink = {
+  url: string
+  text?: string
+  srLabel?: string
+}
+
+interface Props {
+  nextUrl?: PaginationLink
+  prevUrl?: PaginationLink
+  prevI18nKey?: string
+  nextI18nKey?: string
+}
+
+const {
+  nextUrl,
+  prevUrl,
+  prevI18nKey = 'blog.prevPosts',
+  nextI18nKey = 'blog.nextPosts'
+} = Astro.props
+---
+
+{
+  (prevUrl || nextUrl) && (
+    <nav class='mt-4 flex items-center gap-x-4 sm:mt-6'>
+      {prevUrl && (
+        <a class='me-auto py-2' data-astro-prefetch href={prevUrl.url} data-i18n={prevI18nKey}>
+          {prevUrl.srLabel && <span class='sr-only'>{prevUrl.srLabel}</span>}
+          {prevUrl.text ? prevUrl.text : t('blog.prevPosts')}
+        </a>
+      )}
+      {nextUrl && (
+        <a class='ms-auto py-2' data-astro-prefetch href={nextUrl.url} data-i18n={nextI18nKey}>
+          {nextUrl.srLabel && <span class='sr-only'>{nextUrl.srLabel}</span>}
+          {nextUrl.text ? nextUrl.text : t('blog.nextPosts')}
+        </a>
+      )}
+    </nav>
+  )
+}
+

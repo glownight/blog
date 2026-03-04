@@ -10,15 +10,16 @@ function removeDupsAndLowerCase(array: string[]) {
 
 // Define blog collection
 const blog = defineCollection({
-  // Load Markdown and MDX files in the `src/content/blog/` directory.
+  // Load Markdown and MDX files in the `src/content/blog/` directory and all subdirectories.
   loader: glob({ base: './src/content/blog', pattern: '**/*.{md,mdx}' }),
   // Required
   schema: ({ image }) =>
     z.object({
       // Required
-      title: z.string().max(60),
-      description: z.string().max(160),
-      publishDate: z.coerce.date(),
+      // Keep these fields required in output via defaults so markdown without frontmatter can still be indexed.
+      title: z.string().max(60).default(''),
+      description: z.string().max(160).default(''),
+      publishDate: z.coerce.date().default(() => new Date(0)),
       // Optional
       updatedDate: z.coerce.date().optional(),
       heroImage: z

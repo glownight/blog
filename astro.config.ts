@@ -10,7 +10,6 @@ import { defineConfig } from 'astro/config'
 import rehypeKatex from 'rehype-katex'
 import { remarkAlert } from 'remark-github-blockquote-alert'
 import remarkMath from 'remark-math'
-import UnoCSS from 'unocss/astro'
 
 // Others
 // import { visualizer } from 'rollup-plugin-visualizer'
@@ -32,7 +31,7 @@ import config from './src/site.config.ts'
 // https://astro.build/config
 export default defineConfig({
   // Top-Level Options
-  site: 'https://arthals.ink',
+  site: 'https://glownight.com',
   // Deploy to a sub path; See https://astro-pure.js.org/docs/setup/deployment#platform-with-base-path
   // base: '/astro-pure/',
   trailingSlash: 'never',
@@ -76,7 +75,7 @@ export default defineConfig({
   // Server Options
   server: {
     host: true,
-    allowedHosts: ['arthals.ink']
+    allowedHosts: ['glownight.com']
   },
   // Markdown Options
   markdown: {
@@ -113,6 +112,11 @@ export default defineConfig({
     contentIntellisense: true
   },
   vite: {
+    optimizeDeps: {
+      // Avoid pre-bundling astro-pure utils in esbuild.
+      // Its virtual module `virtual:config` should be resolved by the integration plugin at runtime.
+      exclude: ['astro-pure', 'astro-pure/utils']
+    },
     plugins: [
       //   visualizer({
       //     emitFile: true,

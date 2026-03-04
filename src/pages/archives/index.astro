@@ -1,7 +1,8 @@
 ---
 import { PostPreview } from 'astro-pure/components/pages'
-import { getBlogCollection, groupCollectionsByYear, sortMDByDate } from 'astro-pure/server'
+import { getBlogCollection, groupCollectionsByYear, sortMDByDate } from '@/utils/blog-server'
 import { Button } from 'astro-pure/user'
+import { t } from '@/i18n'
 import PageLayout from '@/layouts/BaseLayout.astro'
 
 export const prerender = true
@@ -11,22 +12,34 @@ const allPostsByDate = sortMDByDate(allPosts)
 const allPostsByYear = groupCollectionsByYear(allPostsByDate)
 
 const meta = {
-  description: 'A list of all the years of creating my posts',
-  title: 'Archives'
+  description: t('archives.metaDescription'),
+  title: t('archives.title')
 }
 ---
 
 <PageLayout {meta}>
-  <Button title='Back' href='/blog' variant='back' />
+  <Button
+    title={t('common.back')}
+    href='/blog'
+    variant='back'
+    data-i18n='common.back'
+    data-i18n-target='p'
+  />
 
   <main class='mt-6 lg:mt-10'>
     <div id='content-header' class='animate'>
-      <h1 class='mb-6 text-3xl font-medium'>Archives</h1>
+      <h1 class='mb-6 text-3xl font-medium' data-i18n='archives.title'>{t('archives.title')}</h1>
     </div>
 
-    {allPosts.length === 0 && <p>No posts yet.</p>}
+    {allPosts.length === 0 && <p data-i18n='common.noPostsYet'>{t('common.noPostsYet')}</p>}
 
-    <section id='content' class='animate' aria-label='Blog post list'>
+    <section
+      id='content'
+      class='animate'
+      aria-label={t('common.blogPostsList')}
+      data-i18n='common.blogPostsList'
+      data-i18n-attr='aria-label'
+    >
       {
         allPostsByYear.map(([year, posts]) => (
           <div class='relative mt-20'>
@@ -36,8 +49,8 @@ const meta = {
             >
               <samp>{year}</samp>
             </h2>
-            <p class='px-5 text-muted-foreground'>
-              {posts.length} post{posts.length > 1 && 's'}
+            <p class='px-5 text-muted-foreground' data-i18n='archives.postCount' data-var-count={posts.length}>
+              {t('archives.postCount', { count: posts.length })}
             </p>
             <ul class='flex flex-col text-start'>
               {posts.map((p) => (

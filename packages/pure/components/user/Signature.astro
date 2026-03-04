@@ -28,7 +28,7 @@ const {
   <Fragment set:html={SignatureSVG} />
 </div>
 
-<script define:vars={{ mode, drawDelay, rollbackDelay, loopPause, threshold, defaultDuration }}>
+<script is:inline define:vars={{ mode, drawDelay, rollbackDelay, loopPause, threshold, defaultDuration }}>
   function setupSignature(wrapper) {
     let initialPaths = Array.from(wrapper.querySelectorAll('path[stroke]'))
     if (initialPaths.length === 0) return

@@ -1,5 +1,6 @@
 ---
 import config from '@/site-config'
+import { t } from '@/i18n'
 
 import '@waline/client/style'
 
@@ -9,10 +10,10 @@ const { class: className } = Astro.props
 ---
 
 {
-  config.integ.waline.enable && (
+  config.integ.waline?.enable && (
     <comment-component>
       <div id='waline' class={cn('not-prose', className)}>
-        Comment seems to stuck. Try to refresh?✨
+        <span data-i18n='waline.loadingFallback'>{t('waline.loadingFallback')}</span>
       </div>
     </comment-component>
   )
@@ -25,34 +26,36 @@ const { class: className } = Astro.props
 
   const walineConfig = config.integ.waline
 
-  class Comment extends HTMLElement {
-    constructor() {
-      super()
+  if (walineConfig?.enable) {
+    class Comment extends HTMLElement {
+      constructor() {
+        super()
+      }
+
+      connectedCallback() {
+        // Prevent Vue log errors
+        ;(globalThis as unknown as { __VUE_OPTIONS_API__: boolean }).__VUE_OPTIONS_API__ = true
+        ;(globalThis as unknown as { __VUE_PROD_DEVTOOLS__: boolean }).__VUE_PROD_DEVTOOLS__ = false
+        ;(
+          globalThis as unknown as { __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: boolean }
+        ).__VUE_PROD_HYDRATION_MISMATCH_DETAILS__ = false
+
+        const emoji = walineConfig.emoji?.map(
+          (preset) => `${config.npmCDN}/@waline/emojis@1.2.0/${preset}` as WalineEmojiPresets
+        )
+
+        walineInit({
+          el: '#waline',
+          serverURL: walineConfig.server || '',
+          emoji,
+          reaction: ['/icons/heart-item.svg'],
+          ...walineConfig.additionalConfigs
+        })
+      }
     }
 
-    connectedCallback() {
-      // Prevent Vue log errors
-      ;(globalThis as unknown as { __VUE_OPTIONS_API__: boolean }).__VUE_OPTIONS_API__ = true
-      ;(globalThis as unknown as { __VUE_PROD_DEVTOOLS__: boolean }).__VUE_PROD_DEVTOOLS__ = false
-      ;(
-        globalThis as unknown as { __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: boolean }
-      ).__VUE_PROD_HYDRATION_MISMATCH_DETAILS__ = false
-
-      const emoji = walineConfig.emoji?.map(
-        (preset) => `${config.npmCDN}/@waline/emojis@1.2.0/${preset}` as WalineEmojiPresets
-      )
-
-      walineInit({
-        el: '#waline',
-        serverURL: walineConfig.server || '',
-        emoji,
-        reaction: ['/icons/heart-item.svg'],
-        ...walineConfig.additionalConfigs
-      })
-    }
+    customElements.define('comment-component', Comment)
   }
-
-  if (walineConfig.enable) customElements.define('comment-component', Comment)
 </script>
 
 <style>
@@ -161,10 +164,13 @@ const { class: className } = Astro.props
 
   #waline :global(.wl-reaction-votes:after) {
     margin-left: 0.25em;
-    content: 'Like(s)';
+    content: '次赞';
     display: inline-block;
     clear: both;
     border: 0;
+  }
+  html[data-locale='en-US'] #waline :global(.wl-reaction-votes:after) {
+    content: 'Like(s)';
   }
   #waline :global(.wl-reaction img) {
     filter: invert(25%);

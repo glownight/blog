@@ -3,8 +3,6 @@ import { access, mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import siteConfig from '../src/site.config'
-
 type Friend = {
   name: string
   intro: string
@@ -31,11 +29,11 @@ const projectRoot = path.resolve(__dirname, '..')
 const linksJsonPath = path.join(projectRoot, 'public', 'links.json')
 const avatarOutputDir = path.join(projectRoot, 'public', 'avatars')
 
-const cacheAvatar = siteConfig.integ?.links?.cacheAvatar ?? false
+const cacheAvatar = process.env.CACHE_AVATAR === 'true'
 
 if (!cacheAvatar) {
   console.log(
-    '[avatar-cache] Avatar caching disabled. Set cacheAvatar=true in site.config.ts to enable.'
+    '[avatar-cache] Avatar caching disabled. Set CACHE_AVATAR=true to enable.'
   )
   process.exit(0)
 }

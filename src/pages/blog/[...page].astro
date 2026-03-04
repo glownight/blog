@@ -2,9 +2,11 @@
 import type { GetStaticPaths, Page } from 'astro'
 import type { CollectionEntry } from 'astro:content'
 
-import { Paginator, PostPreview } from 'astro-pure/components/pages'
-import { getBlogCollection, getUniqueTags, sortMDByDate } from 'astro-pure/server'
+import { PostPreview } from 'astro-pure/components/pages'
+import { getBlogCollection, getUniqueTags, sortMDByDate } from '@/utils/blog-server'
 import { Button, Icon } from 'astro-pure/user'
+import { t } from '@/i18n'
+import PaginatorI18n from '@/components/i18n/PaginatorI18n.astro'
 import PageLayout from '@/layouts/BaseLayout.astro'
 import config from '@/site-config'
 
@@ -29,20 +31,20 @@ interface Props {
 const { page, uniqueTags, collectionsCount } = Astro.props
 
 const meta = {
-  description: 'Some posts or archives of my blog',
-  title: 'Blog'
+  description: t('blog.metaDescription'),
+  title: t('blog.title')
 }
 
 const paginationProps = {
   ...(page.url.prev && {
     prevUrl: {
-      text: `← Previous Posts`,
+      text: t('blog.prevPosts'),
       url: page.url.prev
     }
   }),
   ...(page.url.next && {
     nextUrl: {
-      text: `Next Posts →`,
+      text: t('blog.nextPosts'),
       url: page.url.next
     }
   })
@@ -50,24 +52,52 @@ const paginationProps = {
 ---
 
 <PageLayout {meta}>
-  <Button title='Back' href='/' variant='back' />
+  <Button
+    title={t('common.back')}
+    href='/'
+    variant='back'
+    data-i18n='common.back'
+    data-i18n-target='p'
+  />
   <main class='mt-6 lg:mt-10'>
     <div id='content-header' class='animate'>
-      <h1 class='mb-6 mt-6 text-3xl font-medium sm:mt-10'>Blog</h1>
+      <h1 class='mb-6 mt-6 text-3xl font-medium sm:mt-10' data-i18n='blog.title'>{t('blog.title')}</h1>
     </div>
     {
       page.data.length === 0 ? (
-        <p>No posts yet.</p>
+        <p data-i18n='common.noPostsYet'>{t('common.noPostsYet')}</p>
       ) : (
         <div class='grid gap-y-16 sm:grid-cols-[3fr_1fr] sm:gap-x-8'>
-          <section aria-label='Blog posts list' class='animate' id='content'>
+          <section
+            aria-label={t('common.blogPostsList')}
+            class='animate'
+            id='content'
+            data-i18n='common.blogPostsList'
+            data-i18n-attr='aria-label'
+          >
             {/* header */}
             <div class='mb-3 flex flex-col justify-between text-sm sm:mb-5 sm:flex-row'>
-              <span class='text-muted-foreground'>
-                Page {page.currentPage} - Showing {page.data.length} of {collectionsCount} posts
+              <span
+                class='text-muted-foreground'
+                data-i18n='blog.pageSummary'
+                data-var-current={page.currentPage}
+                data-var-shown={page.data.length}
+                data-var-total={collectionsCount}
+              >
+                {t('blog.pageSummary', {
+                  current: page.currentPage,
+                  shown: page.data.length,
+                  total: collectionsCount
+                })}
               </span>
-              <a aria-label='View all blog by years' href='/archives' data-astro-prefetch>
-                View all posts by years →
+              <a
+                aria-label={t('blog.viewByYearsAria')}
+                href='/archives'
+                data-astro-prefetch
+                data-i18n='blog.viewByYearsAria'
+                data-i18n-attr='aria-label'
+              >
+                <span data-i18n='blog.viewByYears'>{t('blog.viewByYears')}</span>
               </a>
             </div>
             {/* posts */}
@@ -76,7 +106,7 @@ const paginationProps = {
                 <PostPreview {post} detailed />
               ))}
             </ul>
-            <Paginator {...paginationProps} />
+            <PaginatorI18n {...paginationProps} />
           </section>
 
           {/* sidebar */}
@@ -84,7 +114,7 @@ const paginationProps = {
             <aside class='animate' id='sidebar'>
               <h2 class='mb-4 flex items-center text-lg font-semibold'>
                 <Icon name='tag-2' class='me-2' />
-                Tags
+                <span data-i18n='blog.tagsTitle'>{t('blog.tagsTitle')}</span>
               </h2>
               <ul class='text-bgColor flex flex-wrap gap-2'>
                 {uniqueTags.map((tag) => (
@@ -94,8 +124,14 @@ const paginationProps = {
                 ))}
               </ul>
               <span class='mt-4 block sm:text-end'>
-                <a aria-label='View all blog categories' href='/tags' data-astro-prefetch>
-                  View all →
+                <a
+                  aria-label={t('blog.viewAllTagsAria')}
+                  href='/tags'
+                  data-astro-prefetch
+                  data-i18n='blog.viewAllTagsAria'
+                  data-i18n-attr='aria-label'
+                >
+                  <span data-i18n='blog.viewAllTags'>{t('blog.viewAllTags')}</span>
                 </a>
               </span>
             </aside>

@@ -1,16 +1,16 @@
 ---
 import type { MarkdownHeading } from 'astro'
 import type { CollectionEntry } from 'astro:content'
-import config from 'virtual:config'
 
 // Plugin styles
 import 'katex/dist/katex.min.css'
 
 import { MediumZoom } from 'astro-pure/advanced'
-import { ArticleBottom, Copyright, Hero, TOC } from 'astro-pure/components/pages'
-import { Signature } from 'astro-pure/user'
+import { ArticleBottom, TOC } from 'astro-pure/components/pages'
+import Hero from '@/components/pages/Hero.astro'
+import Copyright from '@/components/pages/Copyright.astro'
 import PageLayout from '@/layouts/ContentLayout.astro'
-import { Comment, PageInfo } from '@/components/waline'
+import { Comment } from '@/components/waline'
 import { integ } from '@/site-config'
 
 interface Props {
@@ -44,6 +44,38 @@ const socialImage = heroImage
   : '/images/social-card.png'
 const articleDate = updatedDate?.toISOString() ?? publishDate.toISOString()
 const primaryColor = data.heroImage?.color ?? 'hsl(var(--primary) / var(--un-text-opacity))'
+
+const normalizedHeadings = (() => {
+  const valid = headings.filter(
+    (heading): heading is MarkdownHeading =>
+      Boolean(
+        heading &&
+          typeof heading.depth === 'number' &&
+          typeof heading.slug === 'string' &&
+          typeof heading.text === 'string'
+      )
+  )
+
+  const normalized: MarkdownHeading[] = []
+  let hasH2 = false
+
+  for (const heading of valid) {
+    if (heading.depth <= 1) continue
+
+    if (!hasH2) {
+      normalized.push({
+        ...heading,
+        depth: 2
+      })
+      hasH2 = true
+      continue
+    }
+
+    normalized.push(heading)
+  }
+
+  return normalized
+})()
 ---
 
 <PageLayout
@@ -51,17 +83,12 @@ const primaryColor = data.heroImage?.color ?? 'hsl(var(--primary) / var(--un-tex
   highlightColor={primaryColor}
   back='/blog'
 >
-  {!!headings.length && <TOC {headings} slot='sidebar' />}
+  {!!normalizedHeadings.length && <TOC headings={normalizedHeadings} slot='sidebar' />}
 
-  <Hero {data} {remarkPluginFrontmatter} slot='header'>
-    <Fragment slot='description'>
-      {!isDraft && enableComment && <PageInfo comment class='mt-1' />}
-    </Fragment>
-  </Hero>
+  <Hero {data} {remarkPluginFrontmatter} slot='header' />
 
   <slot />
 
-  {config.signature && <Signature />}
   <Fragment slot='bottom'>
     {/* Copyright */}
     <Copyright {data} />

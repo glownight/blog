@@ -33,8 +33,8 @@ import { Icon } from '../user'
           ))
         }
         <div class='flex w-full grow flex-row justify-end gap-x-3 sm:w-fit sm:gap-x-5'>
-          <a class='px-1 py-2 transition-none sm:px-2' href='/search' title='Search'>
-            <span class='sr-only'>Search</span>
+          <a class='px-1 py-2 transition-none sm:px-2' href='/search' title='搜索'>
+            <span class='sr-only' data-i18n='nav.search'>搜索</span>
             <Icon name='search' class='size-5' />
           </a>
         </div>
@@ -47,7 +47,7 @@ import { Icon } from '../user'
         id='toggleDarkMode'
         class='group/dark box-content size-5 rounded-md border p-1.5 transition-colors hover:bg-border sm:group-[.not-top]:rounded-xl'
       >
-        <span class='sr-only'>Dark Theme</span>
+        <span class='sr-only' data-i18n='nav.darkTheme'>深色主题</span>
         <Icon class='system size-5 group-hover/dark:text-primary' name='computer' />
         <Icon class='light hidden size-5 group-hover/dark:text-primary' name='sun' />
         <Icon class='dark hidden size-5 group-hover/dark:text-primary' name='moon' />
@@ -56,7 +56,7 @@ import { Icon } from '../user'
         id='toggleMenu'
         class='rounded-md border p-1.5 transition-colors hover:bg-border sm:hidden sm:group-[.not-top]:rounded-xl'
       >
-        <span class='sr-only'>Menu</span>
+        <span class='sr-only' data-i18n='nav.menu'>菜单</span>
         <Icon class='size-5' name='menu' />
       </button>
     </div>
@@ -67,11 +67,37 @@ import { Icon } from '../user'
 <script is:inline>
   const toggleDarkModeElement = document.getElementById('toggleDarkMode')
   if (toggleDarkModeElement) {
-    toggleDarkModeElement.dataset.theme = localStorage.getItem('theme') || 'system'
+    toggleDarkModeElement.dataset.theme = localStorage.getItem('theme') || 'light'
   }
 </script>
 <script>
   import { setTheme, showToast } from '../../utils'
+
+  function getLocale() {
+    return document.documentElement.getAttribute('data-locale') === 'en-US' ? 'en-US' : 'zh-CN'
+  }
+
+  function getThemeLabel(locale: 'zh-CN' | 'en-US', theme: string) {
+    const labels = {
+      'zh-CN': {
+        dark: '深色',
+        light: '浅色',
+        system: '跟随系统'
+      },
+      'en-US': {
+        dark: 'Dark',
+        light: 'Light',
+        system: 'System'
+      }
+    } as const
+
+    return labels[locale][theme as keyof (typeof labels)['zh-CN']] || theme
+  }
+
+  function getThemeToast(locale: 'zh-CN' | 'en-US', theme: string) {
+    const template = locale === 'en-US' ? 'Theme set to {{theme}}' : '已切换主题：{{theme}}'
+    return template.replace('{{theme}}', getThemeLabel(locale, theme))
+  }
 
   class Header extends HTMLElement {
     constructor() {
@@ -96,9 +122,9 @@ import { Icon } from '../user'
         //   detail: { theme: localStorage.getItem('theme') === 'light' ? 'dark' : 'light' }
         // })
         // document.dispatchEvent(toggleDarkModeEvent)
-        const newTheme = setTheme(undefined, true)
+        const newTheme = setTheme(undefined, true) ?? 'system'
         darkModeBtn.dataset.theme = newTheme
-        showToast({ message: `Set theme to ${newTheme}` })
+        showToast({ message: getThemeToast(getLocale(), newTheme) })
       })
 
       // Menu

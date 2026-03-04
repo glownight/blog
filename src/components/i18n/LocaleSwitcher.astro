@@ -1,0 +1,273 @@
+---
+import { DEFAULT_LOCALE, MESSAGES, t } from '@/i18n'
+---
+
+<div class='locale-switcher'>
+  <button
+    type='button'
+    class='locale-switcher__btn'
+    data-locale-switcher
+    data-i18n='locale.switchAria'
+    data-i18n-attr='aria-label'
+    aria-label={t('locale.switchAria')}
+    title={t('locale.switchToEnglish')}
+  >
+    EN
+  </button>
+</div>
+
+<script is:inline define:vars={{ defaultLocale: DEFAULT_LOCALE, messages: MESSAGES }}>
+  const STORAGE_KEY = 'site-locale'
+  const SUPPORTED_LOCALES = ['zh-CN', 'en-US']
+
+  function revealSwitcher() {
+    const switcher = document.querySelector('.locale-switcher')
+    if (switcher) {
+      switcher.classList.add('locale-switcher--ready')
+    }
+  }
+
+  function mountIntoHeader() {
+    const switcher = document.querySelector('.locale-switcher')
+    if (!switcher) return
+
+    const darkModeButton = document.querySelector('header-component #toggleDarkMode')
+    const buttonGroup = darkModeButton?.parentElement
+
+    if (buttonGroup && switcher.parentElement !== buttonGroup) {
+      buttonGroup.insertBefore(switcher, darkModeButton)
+    }
+
+    revealSwitcher()
+  }
+
+  function normalizeLocale(value) {
+    if (!value) return defaultLocale
+    if (SUPPORTED_LOCALES.includes(value)) return value
+
+    const normalized = value.toLowerCase()
+    if (normalized.startsWith('zh')) return 'zh-CN'
+    if (normalized.startsWith('en')) return 'en-US'
+    return defaultLocale
+  }
+
+  function getLocaleMessages(locale) {
+    return messages[locale] || messages[defaultLocale] || {}
+  }
+
+  function collectVars(element) {
+    const vars = {}
+    for (const attr of element.attributes) {
+      if (!attr.name.startsWith('data-var-')) continue
+      vars[attr.name.slice(9)] = attr.value
+    }
+    return vars
+  }
+
+  function formatMessage(template, vars = {}) {
+    return template.replace(/\{\{(\w+)\}\}/g, (_, varName) => `${vars[varName] ?? ''}`)
+  }
+
+  function translate(locale, key, vars = {}) {
+    const localeMessages = getLocaleMessages(locale)
+    const fallbackMessages = getLocaleMessages(defaultLocale)
+    const template = localeMessages[key] || fallbackMessages[key] || key
+    return formatMessage(template, vars)
+  }
+
+  function setElementText(element, value) {
+    const targetSelector = element.getAttribute('data-i18n-target')
+    if (targetSelector) {
+      const target = element.querySelector(targetSelector)
+      if (target) {
+        target.textContent = value
+        return
+      }
+    }
+    element.textContent = value
+  }
+
+  function applyDataI18n(locale) {
+    document.querySelectorAll('[data-i18n]').forEach((element) => {
+      const key = element.getAttribute('data-i18n')
+      if (!key) return
+
+      const value = translate(locale, key, collectVars(element))
+      const attrName = element.getAttribute('data-i18n-attr')
+      const targetSelector = element.getAttribute('data-i18n-target')
+
+      if (attrName) {
+        if (targetSelector) {
+          const target = element.querySelector(targetSelector)
+          if (target) target.setAttribute(attrName, value)
+        } else {
+          element.setAttribute(attrName, value)
+        }
+        return
+      }
+
+      setElementText(element, value)
+    })
+  }
+
+  function applyHeaderI18n(locale) {
+    const navKeyByPath = {
+      '/blog': 'nav.blog',
+      '/projects': 'nav.projects',
+      '/about': 'nav.about'
+    }
+
+    document.querySelectorAll("header-component a[aria-label='Nav menu item']").forEach((link) => {
+      const href = link.getAttribute('href') || ''
+      const key = navKeyByPath[href]
+      if (!key) return
+      link.textContent = translate(locale, key)
+    })
+
+    const searchLink = document.querySelector("header-component a[href='/search']")
+    if (searchLink) {
+      const searchText = translate(locale, 'nav.search')
+      searchLink.setAttribute('title', searchText)
+      const srOnly = searchLink.querySelector('.sr-only')
+      if (srOnly) srOnly.textContent = searchText
+    }
+
+    const darkThemeLabel = document.querySelector('header-component #toggleDarkMode .sr-only')
+    if (darkThemeLabel) {
+      darkThemeLabel.textContent = translate(locale, 'nav.darkTheme')
+    }
+
+    const menuLabel = document.querySelector('header-component #toggleMenu .sr-only')
+    if (menuLabel) {
+      menuLabel.textContent = translate(locale, 'nav.menu')
+    }
+  }
+
+  function applyTocI18n(locale) {
+    const tocTitle = document.querySelector('toc-heading h2')
+    if (tocTitle) {
+      tocTitle.textContent = translate(locale, 'common.tableOfContents')
+    }
+
+    document.querySelectorAll("toc-heading a[href^='#']").forEach((link) => {
+      const href = link.getAttribute('href') || ''
+      const slug = href.startsWith('#') ? decodeURIComponent(href.slice(1)) : ''
+      if (!slug) return
+
+      const heading = document.getElementById(slug)
+      if (!heading) return
+      const text = heading.textContent?.trim()
+      if (text) {
+        link.textContent = text
+      }
+    })
+  }
+
+  function updateSwitcher(locale) {
+    const button = document.querySelector('[data-locale-switcher]')
+    if (!button) return
+
+    button.textContent = locale === 'zh-CN' ? 'EN' : '中'
+    button.setAttribute(
+      'title',
+      locale === 'zh-CN'
+        ? translate(locale, 'locale.switchToEnglish')
+        : translate(locale, 'locale.switchToChinese')
+    )
+  }
+
+  function getStoredLocale() {
+    return normalizeLocale(localStorage.getItem(STORAGE_KEY))
+  }
+
+  function applyLocale(nextLocale, persist = true) {
+    const locale = normalizeLocale(nextLocale)
+    if (persist) {
+      localStorage.setItem(STORAGE_KEY, locale)
+    }
+
+    document.documentElement.lang = locale
+    document.documentElement.setAttribute('data-locale', locale)
+
+    applyDataI18n(locale)
+    applyHeaderI18n(locale)
+    applyTocI18n(locale)
+    updateSwitcher(locale)
+  }
+
+  const win = window
+  if (!win.__APP_I18N__) {
+    win.__APP_I18N__ = {
+      applyLocale,
+      getLocale: getStoredLocale
+    }
+  }
+
+  if (!win.__APP_I18N_INITIALIZED__) {
+    win.__APP_I18N_INITIALIZED__ = true
+
+    document.addEventListener('astro:page-load', () => {
+      mountIntoHeader()
+      win.__APP_I18N__.applyLocale(win.__APP_I18N__.getLocale(), false)
+    })
+
+    document.addEventListener('click', (event) => {
+      const target = event.target
+      const button = target && target.closest ? target.closest('[data-locale-switcher]') : null
+      if (!button) return
+
+      const currentLocale = win.__APP_I18N__.getLocale()
+      const nextLocale = currentLocale === 'zh-CN' ? 'en-US' : 'zh-CN'
+      win.__APP_I18N__.applyLocale(nextLocale, true)
+    })
+
+    if (document.readyState === 'loading') {
+      document.addEventListener(
+        'DOMContentLoaded',
+        () => {
+          mountIntoHeader()
+          win.__APP_I18N__.applyLocale(win.__APP_I18N__.getLocale(), false)
+        },
+        { once: true }
+      )
+    } else {
+      mountIntoHeader()
+      win.__APP_I18N__.applyLocale(win.__APP_I18N__.getLocale(), false)
+    }
+  }
+</script>
+
+<style>
+  .locale-switcher {
+    display: none;
+  }
+
+  .locale-switcher--ready {
+    display: flex;
+    align-items: center;
+  }
+
+  .locale-switcher__btn {
+    box-sizing: content-box;
+    min-width: 2rem;
+    height: 1.25rem;
+    border: 1px solid hsl(var(--border) / var(--un-border-opacity, 1));
+    background: transparent;
+    color: hsl(var(--muted-foreground) / var(--un-text-opacity, 1));
+    border-radius: 0.375rem;
+    padding: 0.375rem;
+    font-size: 0.95rem;
+    line-height: 1;
+    transition: background-color 0.2s ease;
+  }
+
+  .locale-switcher__btn:hover {
+    background: hsl(var(--border) / var(--un-bg-opacity, 1));
+  }
+
+  @media (min-width: 640px) {
+    :global(header-component.not-top) .locale-switcher__btn {
+      border-radius: 0.75rem;
+    }
+  }
+</style>

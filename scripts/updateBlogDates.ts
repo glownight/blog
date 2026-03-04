@@ -4,7 +4,6 @@ import * as fs from 'fs/promises'
 import * as path from 'path'
 import { fileURLToPath } from 'url'
 
-// ANSI color codes
 const colors = {
   reset: '\x1b[0m',
   bright: '\x1b[1m',
@@ -13,37 +12,35 @@ const colors = {
   yellow: '\x1b[33m',
   blue: '\x1b[34m',
   magenta: '\x1b[35m',
-  cyan: '\x1b[36m',
-  white: '\x1b[37m'
+  cyan: '\x1b[36m'
 }
 
-// 彩色输出函数
 function colorLog(message: string, color: string = colors.reset): void {
   console.log(`${color}${message}${colors.reset}`)
 }
 
 function successLog(message: string): void {
-  colorLog(`✅ ${message}`, colors.green)
+  colorLog(`[ok] ${message}`, colors.green)
 }
 
 function infoLog(message: string): void {
-  colorLog(`ℹ️  ${message}`, colors.cyan)
+  colorLog(`[info] ${message}`, colors.cyan)
 }
 
 function warningLog(message: string): void {
-  colorLog(`⚠️  ${message}`, colors.yellow)
+  colorLog(`[warn] ${message}`, colors.yellow)
 }
 
 function errorLog(message: string): void {
-  colorLog(`❌ ${message}`, colors.red)
+  colorLog(`[error] ${message}`, colors.red)
 }
 
 function updateLog(message: string): void {
-  colorLog(`🔄 ${message}`, colors.magenta)
+  colorLog(`[update] ${message}`, colors.magenta)
 }
 
 function newLog(message: string): void {
-  colorLog(`📝 ${message}`, colors.blue)
+  colorLog(`[new] ${message}`, colors.blue)
 }
 
 const __filename = fileURLToPath(import.meta.url)
@@ -59,29 +56,86 @@ interface ArticleDatabase {
   [filename: string]: ArticleMetadata
 }
 
+interface ParsedFrontmatter {
+  frontmatter: string
+  body: string
+  title: string | null
+  description: string | null
+  publishDate: string | null
+  updatedDate: string | null
+}
+
 const BLOG_DIR = path.join(__dirname, '../src/content/blog')
 const DATABASE_FILE = path.join(__dirname, 'blog-metadata.json')
+const REQUIRED_FRONTMATTER_FIELDS = ['title', 'description', 'publishDate', 'updatedDate'] as const
 
-/**
- * 计算文件内容的MD5哈希值
- */
 function calculateHash(content: string): string {
   return crypto.createHash('md5').update(content).digest('hex')
 }
 
-/**
- * 解析文章的frontmatter
- */
-function parseFrontmatter(content: string): {
-  frontmatter: string
-  body: string
-  publishDate: string | null
-  updatedDate: string | null
-} {
-  const lines = content.split('\n')
+function formatDate(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const seconds = String(date.getSeconds()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+}
 
+function normalizePathForDb(input: string): string {
+  return input.replace(/\\/g, '/')
+}
+
+function toRelativePath(filePath: string): string {
+  return normalizePathForDb(path.relative(BLOG_DIR, filePath))
+}
+
+function normalizeNewlines(content: string): string {
+  return content.replace(/\r\n/g, '\n')
+}
+
+function unquote(raw: string): string {
+  const trimmed = raw.trim()
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1)
+  }
+  return trimmed
+}
+
+function yamlString(value: string): string {
+  const escaped = value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+  return `"${escaped}"`
+}
+
+function isValidDateInput(value: string | null): value is string {
+  if (!value) return false
+  return !Number.isNaN(new Date(value).valueOf())
+}
+
+function extractField(frontmatter: string, field: string): string | null {
+  const regex = new RegExp(`^${field}:\\s*(.+)$`, 'm')
+  const match = frontmatter.match(regex)
+  return match ? unquote(match[1]) : null
+}
+
+function parseFrontmatter(content: string): ParsedFrontmatter {
+  const normalized = normalizeNewlines(content)
+  const lines = normalized.split('\n')
+
+  // No frontmatter: keep file body as-is and let caller initialize required fields.
   if (lines[0] !== '---') {
-    throw new Error('Invalid frontmatter format')
+    return {
+      frontmatter: '',
+      body: normalized,
+      title: null,
+      description: null,
+      publishDate: null,
+      updatedDate: null
+    }
   }
 
   let frontmatterEnd = -1
@@ -96,260 +150,292 @@ function parseFrontmatter(content: string): {
     throw new Error('Frontmatter not properly closed')
   }
 
-  const frontmatterLines = lines.slice(1, frontmatterEnd)
-  const bodyLines = lines.slice(frontmatterEnd + 1)
-
-  let publishDate: string | null = null
-  let updatedDate: string | null = null
-
-  // 解析 publishDate 和 updatedDate
-  for (const line of frontmatterLines) {
-    const publishMatch = line.match(/^publishDate:\s*(.+)$/)
-    if (publishMatch) {
-      publishDate = publishMatch[1].trim()
-    }
-
-    const updatedMatch = line.match(/^updatedDate:\s*(.+)$/)
-    if (updatedMatch) {
-      updatedDate = updatedMatch[1].trim()
-    }
-  }
+  const frontmatter = lines.slice(1, frontmatterEnd).join('\n')
+  const body = lines.slice(frontmatterEnd + 1).join('\n')
 
   return {
-    frontmatter: frontmatterLines.join('\n'),
-    body: bodyLines.join('\n'),
-    publishDate,
-    updatedDate
+    frontmatter,
+    body,
+    title: extractField(frontmatter, 'title'),
+    description: extractField(frontmatter, 'description'),
+    publishDate: extractField(frontmatter, 'publishDate'),
+    updatedDate: extractField(frontmatter, 'updatedDate')
   }
 }
 
-/**
- * 构建新的frontmatter，如果需要的话添加updatedDate
- */
-function buildFrontmatter(frontmatter: string, publishDate: string, updatedDate: string): string {
-  const lines = frontmatter.split('\n')
-  const newLines: string[] = []
-  let publishDateFound = false
-  let updatedDateAdded = false
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/`[^`]*`/g, ' ')
+    .replace(/!\[[^\]]*]\([^)]*\)/g, ' ')
+    .replace(/\[([^\]]+)]\([^)]*\)/g, '$1')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/[*_~>#-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
+function getDefaultTitle(relativePath: string): string {
+  const filename = path.basename(relativePath, path.extname(relativePath))
+  return filename.trim() || 'Untitled'
+}
 
-    if (line.match(/^publishDate:/)) {
-      newLines.push(line)
-      publishDateFound = true
-      // 在publishDate后立即添加updatedDate（如果还没有添加的话）
-      if (!updatedDateAdded) {
-        newLines.push(`updatedDate: ${updatedDate}`)
-        updatedDateAdded = true
-      }
-    } else if (line.match(/^updatedDate:/)) {
-      // 如果还没有添加updatedDate，则添加；否则跳过（避免重复）
-      if (!updatedDateAdded) {
-        newLines.push(`updatedDate: ${updatedDate}`)
-        updatedDateAdded = true
-      }
-      // 跳过所有现有的updatedDate行
-    } else {
-      newLines.push(line)
+function getDefaultDescription(body: string, title: string): string {
+  const normalizedBody = normalizeNewlines(body)
+  const lines = normalizedBody
+    .split('\n')
+    .map((line) => stripMarkdown(line))
+    .filter(Boolean)
+  const firstMeaningful = lines[0] ?? title
+  return firstMeaningful.length > 150 ? `${firstMeaningful.slice(0, 147)}...` : firstMeaningful
+}
+
+function buildFrontmatter(
+  frontmatter: string,
+  title: string,
+  description: string,
+  publishDate: string,
+  updatedDate: string
+): string {
+  const lines = frontmatter ? frontmatter.split('\n') : []
+  const preserved = lines.filter((line) => {
+    const key = line.split(':')[0]?.trim()
+    return !REQUIRED_FRONTMATTER_FIELDS.includes(key as (typeof REQUIRED_FRONTMATTER_FIELDS)[number])
+  })
+
+  return [
+    `title: ${yamlString(title)}`,
+    `description: ${yamlString(description)}`,
+    `publishDate: ${publishDate}`,
+    `updatedDate: ${updatedDate}`,
+    ...preserved
+  ].join('\n')
+}
+
+function buildMarkdownWithFrontmatter(frontmatter: string, body: string): string {
+  const normalizedBody = normalizeNewlines(body)
+  const separatedBody = normalizedBody.startsWith('\n') ? normalizedBody : `\n${normalizedBody}`
+  return `---\n${frontmatter}\n---${separatedBody}`
+}
+
+async function collectMarkdownFilesRecursively(dir: string): Promise<string[]> {
+  const entries = await fs.readdir(dir, { withFileTypes: true })
+  const files: string[] = []
+
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name)
+    if (entry.isDirectory()) {
+      files.push(...(await collectMarkdownFilesRecursively(fullPath)))
+      continue
+    }
+    if (entry.isFile() && /\.(md|mdx)$/i.test(entry.name)) {
+      files.push(fullPath)
     }
   }
 
-  // 如果没有找到publishDate，在末尾添加
-  if (!publishDateFound) {
-    newLines.push(`publishDate: ${publishDate}`)
-    newLines.push(`updatedDate: ${updatedDate}`)
-  } else if (!updatedDateAdded) {
-    // 如果有publishDate但没有添加updatedDate，在末尾添加
-    newLines.push(`updatedDate: ${updatedDate}`)
-  }
-
-  return newLines.join('\n')
+  return files
 }
 
-/**
- * 格式化日期为指定格式
- */
-function formatDate(date: Date): string {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const hours = String(date.getHours()).padStart(2, '0')
-  const minutes = String(date.getMinutes()).padStart(2, '0')
-  const seconds = String(date.getSeconds()).padStart(2, '0')
-
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
-}
-
-/**
- * 读取或创建数据库
- */
 async function loadDatabase(): Promise<ArticleDatabase> {
   try {
     const content = await fs.readFile(DATABASE_FILE, 'utf-8')
     return JSON.parse(content)
-  } catch (error) {
-    infoLog('Creating new database...')
+  } catch {
+    infoLog('Creating new metadata database...')
     return {}
   }
 }
 
-/**
- * 保存数据库
- */
 async function saveDatabase(database: ArticleDatabase): Promise<void> {
   await fs.writeFile(DATABASE_FILE, JSON.stringify(database, null, 2))
 }
 
-/**
- * 处理单个文章文件
- */
-async function processArticle(
-  filePath: string,
-  filename: string,
-  database: ArticleDatabase
-): Promise<void> {
-  const content = await fs.readFile(filePath, 'utf-8')
-  const hash = calculateHash(content)
-
-  try {
-    const { frontmatter, body, publishDate, updatedDate } = parseFrontmatter(content)
-
-    if (!publishDate) {
-      warningLog(`${filename} has no publishDate, skipping...`)
-      return
-    }
-
-    const existingEntry = database[filename]
-    const now = new Date()
-    const currentTime = formatDate(now)
-
-    if (!existingEntry) {
-      // 新文章
-      const finalUpdatedDate = updatedDate || publishDate
-
-      database[filename] = {
-        hash,
-        publishDate,
-        updatedDate: finalUpdatedDate
-      }
-
-      // 对于新文章，只记录到数据库，不修改原文件
-      if (!updatedDate) {
-        newLog(`${filename} recorded (will add updatedDate when content changes)`)
-      } else {
-        newLog(`${filename} added to database`)
-      }
-    } else if (existingEntry.hash !== hash) {
-      // 内容已更改
-      database[filename] = {
-        ...existingEntry,
-        hash,
-        updatedDate: currentTime
-      }
-
-      // 更新文件中的updatedDate（如果原文件没有updatedDate则添加，有则更新）
-      const newFrontmatter = buildFrontmatter(frontmatter, publishDate, currentTime)
-      const newContent = `---\n${newFrontmatter}\n---\n${body}`
-      await fs.writeFile(filePath, newContent)
-
-      // 重新计算更新后文件的哈希值并更新数据库
-      const updatedHash = calculateHash(newContent)
-      database[filename] = {
-        ...existingEntry,
-        hash: updatedHash,
-        updatedDate: currentTime
-      }
-
-      if (!updatedDate) {
-        updateLog(`${filename} - Added updatedDate`)
-      } else {
-        updateLog(`${filename} - Updated updatedDate`)
-      }
-    }
-    // 移除 "No changes" 的输出，不显示无变化的文件
-  } catch (error) {
-    errorLog(`Error processing ${filename}: ${error}`)
-  }
+function getLegacyKey(relativePath: string): string {
+  return path.basename(relativePath)
 }
 
-/**
- * 主函数
- */
+function resolveDatabaseKey(
+  database: ArticleDatabase,
+  relativePath: string,
+  canUseLegacyKey: boolean
+): { key: string; entry: ArticleMetadata | undefined; migrated: boolean } {
+  if (database[relativePath]) {
+    return { key: relativePath, entry: database[relativePath], migrated: false }
+  }
+
+  if (!canUseLegacyKey) {
+    return { key: relativePath, entry: undefined, migrated: false }
+  }
+
+  const legacyKey = getLegacyKey(relativePath)
+  const legacyEntry = database[legacyKey]
+  if (!legacyEntry) {
+    return { key: relativePath, entry: undefined, migrated: false }
+  }
+
+  database[relativePath] = legacyEntry
+  delete database[legacyKey]
+  return { key: relativePath, entry: database[relativePath], migrated: true }
+}
+
+function classifyResult(
+  hadEntryBefore: boolean,
+  hashBefore: string | undefined,
+  hashAfter: string
+): 'new' | 'changed' | 'unchanged' {
+  if (!hadEntryBefore) return 'new'
+  if (!hashBefore || hashBefore !== hashAfter) return 'changed'
+  return 'unchanged'
+}
+
+async function processArticle(
+  filePath: string,
+  relativePath: string,
+  database: ArticleDatabase,
+  canUseLegacyKey: boolean
+): Promise<'new' | 'changed' | 'unchanged'> {
+  const rawContent = await fs.readFile(filePath, 'utf-8')
+  const normalizedRawContent = normalizeNewlines(rawContent)
+  const stat = await fs.stat(filePath)
+  const parsed = parseFrontmatter(normalizedRawContent)
+
+  const title = (parsed.title || '').trim() || getDefaultTitle(relativePath)
+  const description = (parsed.description || '').trim() || getDefaultDescription(parsed.body, title)
+  const publishDate = isValidDateInput(parsed.publishDate)
+    ? parsed.publishDate
+    : formatDate(stat.mtime)
+  const initialUpdatedDate = isValidDateInput(parsed.updatedDate) ? parsed.updatedDate : publishDate
+
+  const { key, entry, migrated } = resolveDatabaseKey(database, relativePath, canUseLegacyKey)
+  if (migrated) {
+    infoLog(`Migrated metadata key: ${getLegacyKey(relativePath)} -> ${relativePath}`)
+  }
+
+  const hashBefore = entry?.hash
+  const now = new Date()
+  let updatedDate = initialUpdatedDate
+
+  // Compare hash with a normalized representation (required fields guaranteed).
+  const normalizedFrontmatterForHash = buildFrontmatter(
+    parsed.frontmatter,
+    title,
+    description,
+    publishDate,
+    updatedDate
+  )
+  const normalizedContentForHash = buildMarkdownWithFrontmatter(
+    normalizedFrontmatterForHash,
+    parsed.body
+  )
+  const normalizedHash = calculateHash(normalizedContentForHash)
+
+  if (entry && entry.hash !== normalizedHash) {
+    updatedDate = formatDate(now)
+  }
+
+  const finalFrontmatter = buildFrontmatter(
+    parsed.frontmatter,
+    title,
+    description,
+    publishDate,
+    updatedDate
+  )
+  const finalContent = buildMarkdownWithFrontmatter(finalFrontmatter, parsed.body)
+  const finalHash = calculateHash(finalContent)
+
+  if (finalContent !== normalizedRawContent) {
+    await fs.writeFile(filePath, finalContent)
+  }
+
+  database[key] = {
+    hash: finalHash,
+    publishDate,
+    updatedDate
+  }
+
+  const result = classifyResult(Boolean(entry), hashBefore, finalHash)
+
+  if (result === 'new') {
+    newLog(`${relativePath} indexed`)
+  } else if (result === 'changed') {
+    updateLog(`${relativePath} updated`)
+  }
+
+  return result
+}
+
 async function main(): Promise<void> {
-  colorLog('\n🚀 Starting blog date update process...', colors.bright)
+  colorLog('\nStarting blog metadata sync...', colors.bright)
 
   try {
-    // 确保脚本目录存在
     await fs.mkdir(path.dirname(DATABASE_FILE), { recursive: true })
-
-    // 读取数据库
     const database = await loadDatabase()
 
-    // 读取博客目录
-    const files = await fs.readdir(BLOG_DIR)
-    const markdownFiles = files.filter((file) => file.endsWith('.md') || file.endsWith('.mdx'))
+    const markdownFilePaths = await collectMarkdownFilesRecursively(BLOG_DIR)
+    const relativePaths = markdownFilePaths.map((filePath) => toRelativePath(filePath))
 
-    infoLog(`Found ${markdownFiles.length} markdown files`)
+    const basenameCounts = relativePaths.reduce(
+      (acc, relativePath) => {
+        const basename = path.basename(relativePath)
+        acc.set(basename, (acc.get(basename) ?? 0) + 1)
+        return acc
+      },
+      new Map<string, number>()
+    )
+
+    infoLog(
+      `Found ${markdownFilePaths.length} markdown files under src/content/blog (recursive scan enabled)`
+    )
 
     let processedCount = 0
     let changedCount = 0
     let newCount = 0
 
-    // 处理每个文件
-    for (const filename of markdownFiles) {
-      const filePath = path.join(BLOG_DIR, filename)
-      const beforeCount = Object.keys(database).length
-      const existingEntry = database[filename]
+    for (const filePath of markdownFilePaths) {
+      const relativePath = toRelativePath(filePath)
+      const canUseLegacyKey = (basenameCounts.get(path.basename(relativePath)) ?? 0) === 1
 
-      await processArticle(filePath, filename, database)
-
-      // 统计变化
-      const afterCount = Object.keys(database).length
-      if (!existingEntry) {
-        newCount++
-      } else if (
-        existingEntry &&
-        database[filename] &&
-        existingEntry.hash !== database[filename].hash
-      ) {
-        changedCount++
+      try {
+        const result = await processArticle(filePath, relativePath, database, canUseLegacyKey)
+        if (result === 'new') newCount++
+        if (result === 'changed') changedCount++
+      } catch (error) {
+        errorLog(`Error processing ${relativePath}: ${error}`)
       }
+
       processedCount++
     }
 
-    // 清理数据库中不存在的文件
-    const existingFiles = new Set(markdownFiles)
+    const existingFiles = new Set(relativePaths)
     let deletedCount = 0
     for (const filename of Object.keys(database)) {
       if (!existingFiles.has(filename)) {
-        warningLog(`Removing deleted file from database: ${filename}`)
+        warningLog(`Removing deleted file from metadata database: ${filename}`)
         delete database[filename]
         deletedCount++
       }
     }
 
-    // 保存数据库
     await saveDatabase(database)
 
-    // 总结信息
-    colorLog('\n📊 Summary:', colors.bright)
+    colorLog('\nSummary:', colors.bright)
     infoLog(`Total files processed: ${processedCount}`)
     if (newCount > 0) newLog(`New files: ${newCount}`)
     if (changedCount > 0) updateLog(`Updated files: ${changedCount}`)
     if (deletedCount > 0) warningLog(`Deleted files: ${deletedCount}`)
 
-    successLog('Blog date update process completed!')
-    infoLog(`Database saved to: ${DATABASE_FILE}`)
+    successLog('Blog metadata sync completed.')
+    infoLog(`Metadata database: ${DATABASE_FILE}`)
   } catch (error) {
     errorLog(`Fatal error: ${error}`)
     process.exit(1)
   }
 }
 
-// 如果直接运行此脚本
-if (import.meta.url === `file://${process.argv[1]}`) {
-  main()
+const isDirectRun = process.argv[1] ? path.resolve(process.argv[1]) === __filename : false
+
+if (isDirectRun) {
+  void main()
 }
 
 export { main as updateBlogDates }

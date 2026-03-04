@@ -10,7 +10,9 @@ const { header: headerName, content: contentName, needPercent = true } = Astro.p
 >
   <slot name='other-icons' />
   <button
-    aria-label='Back to Top'
+    aria-label='返回顶部'
+    data-i18n='common.backToTop'
+    data-i18n-attr='aria-label'
     class='relative size-10 flex items-center justify-center rounded-full border-2 border-transparent bg-muted text-muted-foreground duration-300 hover:border-border/75 sm:size-12 opacity-0'
     id='to-top-btn'
   >

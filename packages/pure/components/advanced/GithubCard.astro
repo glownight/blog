@@ -39,7 +39,9 @@ const [owner, repoName] = repo.split('/')
         <Icon name='github' />
       </div>
     </div>
-    <p id='gh-description' class='load-block text-sm sm:text-base'>Waiting for api.github.com...</p>
+    <p id='gh-description' class='load-block text-sm sm:text-base' data-i18n='github.loadingDescription'>
+      正在等待 api.github.com...
+    </p>
     <div class='flex items-center justify-between gap-x-2'>
       <div class='load-block flex flex-wrap items-center gap-x-3 gap-y-1 sm:gap-x-5'>
         <div class='flex items-center gap-x-1.5 sm:gap-x-2'>
@@ -109,6 +111,27 @@ const [owner, repoName] = repo.split('/')
   }
 
   class GithubCard extends HTMLElement {
+    getLocale() {
+      return document.documentElement.getAttribute('data-locale') === 'en-US' ? 'en-US' : 'zh-CN'
+    }
+
+    localize(key: 'descriptionNotSet' | 'fetchFailed' | 'notAvailable') {
+      const messages = {
+        'zh-CN': {
+          descriptionNotSet: '暂无描述',
+          fetchFailed: '获取数据失败',
+          notAvailable: '暂无'
+        },
+        'en-US': {
+          descriptionNotSet: 'Description not set',
+          fetchFailed: 'Failed to fetch data',
+          notAvailable: 'N/A'
+        }
+      } as const
+
+      return messages[this.getLocale()][key]
+    }
+
     async fetchGithub(repo: string): Promise<GithubProps | null> {
       try {
         const res = await fetch(`https://api.github.com/repos/${repo}`, {
@@ -139,18 +162,18 @@ const [owner, repoName] = repo.split('/')
         // Update stats
         this.updateElement('#gh-stars', this.numberFormat(data.stargazers_count))
         this.updateElement('#gh-forks', this.numberFormat(data.forks))
-        this.updateElement('#gh-language', data.language || 'N/A')
+        this.updateElement('#gh-language', data.language || this.localize('notAvailable'))
         // Update description
         const description =
           typeof data.description === 'string'
             ? data.description.replace(/:[a-zA-Z0-9_]+:/g, '')
-            : 'Description not set'
+            : this.localize('descriptionNotSet')
         this.updateElement('#gh-description', description)
         // Update license
-        const licenseText = data.license?.spdx_id || 'N/A'
+        const licenseText = data.license?.spdx_id || this.localize('notAvailable')
         const licenseEl = this.querySelector('#gh-license') as HTMLElement
         licenseEl.textContent = licenseText
-        licenseEl.classList.toggle('no-license', licenseText === 'N/A')
+        licenseEl.classList.toggle('no-license', licenseText === this.localize('notAvailable'))
         // Update avatar
         const avatarEl = this.querySelector('#gh-avatar') as HTMLElement
         if (avatarEl) {
@@ -160,7 +183,7 @@ const [owner, repoName] = repo.split('/')
         this.classList.remove('loading')
       } catch (e) {
         console.error('Error setting Github data:', e)
-        this.updateElement('#gh-description', 'Failed to fetch data')
+        this.updateElement('#gh-description', this.localize('fetchFailed'))
       }
     }
 

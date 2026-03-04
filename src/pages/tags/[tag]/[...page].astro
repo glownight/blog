@@ -2,9 +2,11 @@
 import type { GetStaticPaths, Page } from 'astro'
 import type { CollectionEntry } from 'astro:content'
 
-import { Paginator, PostPreview } from 'astro-pure/components/pages'
-import { getBlogCollection, getUniqueTags, sortMDByDate } from 'astro-pure/server'
+import { PostPreview } from 'astro-pure/components/pages'
+import { getBlogCollection, getUniqueTags, sortMDByDate } from '@/utils/blog-server'
 import { Button } from 'astro-pure/user'
+import { t } from '@/i18n'
+import PaginatorI18n from '@/components/i18n/PaginatorI18n.astro'
 import PageLayout from '@/layouts/BaseLayout.astro'
 import config from '@/site-config'
 
@@ -30,22 +32,23 @@ interface Props {
 
 const { page } = Astro.props
 const { tag } = Astro.params
+const safeTag = tag ?? ''
 
 const meta = {
-  description: `View all posts with the tag - ${tag}`,
-  title: `Tag: ${tag}`
+  description: t('tagPosts.metaDescription', { tag: safeTag }),
+  title: `${t('tagPosts.titlePrefix')} ${safeTag}`
 }
 
 const paginationProps = {
   ...(page.url.prev && {
     prevUrl: {
-      text: `← Previous Tags`,
+      text: t('tagPosts.prev'),
       url: page.url.prev
     }
   }),
   ...(page.url.next && {
     nextUrl: {
-      text: `Next Tags →`,
+      text: t('tagPosts.next'),
       url: page.url.next
     }
   })
@@ -53,20 +56,32 @@ const paginationProps = {
 ---
 
 <PageLayout {meta}>
-  <Button title='Back' href='/blog' variant='back' />
+  <Button
+    title={t('common.back')}
+    href='/blog'
+    variant='back'
+    data-i18n='common.back'
+    data-i18n-target='p'
+  />
   <main class='mt-6 lg:mt-10'>
     <div id='content-header' class='animate'>
       <h1 class='mb-6 flex items-end gap-x-2 text-3xl font-medium'>
-        Tags:
-        <span class='text-2xl'>#{tag}</span>
+        <span data-i18n='tagPosts.titlePrefix'>{t('tagPosts.titlePrefix')}</span>
+        <span class='text-2xl'>#{safeTag}</span>
       </h1>
     </div>
 
-    <section id='content' class='animate' aria-label='Blog post list'>
+    <section
+      id='content'
+      class='animate'
+      aria-label={t('common.blogPostsList')}
+      data-i18n='common.blogPostsList'
+      data-i18n-attr='aria-label'
+    >
       <ul class='flex flex-col gap-y-3 text-start'>
         {page.data.map((post) => <PostPreview as='h2' {post} detailed />)}
       </ul>
-      <Paginator {...paginationProps} />
+      <PaginatorI18n {...paginationProps} prevI18nKey='tagPosts.prev' nextI18nKey='tagPosts.next' />
     </section>
   </main>
 </PageLayout>

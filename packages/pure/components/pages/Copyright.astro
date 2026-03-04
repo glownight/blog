@@ -48,13 +48,13 @@ const shares = {
   {/* common info */}
   <div class='flex flex-row flex-wrap justify-start gap-x-5 gap-y-1 sm:gap-x-8'>
     <div class='flex gap-x-2 sm:flex-col'>
-      <span>Author</span>
+      <span data-i18n='copyright.author'>作者</span>
       <span class='text-sm text-foreground max-sm:place-self-center'>{config.author}</span>
     </div>
     {
       publishDate && (
         <div class='flex gap-x-2 sm:min-w-16 sm:flex-col'>
-          <span>Published at</span>
+          <span data-i18n='copyright.publishedAt'>发布于</span>
           <span class='text-sm text-foreground max-sm:place-self-center'>
             {getFormattedDate(publishDate, {
               month: 'long'
@@ -63,16 +63,6 @@ const shares = {
         </div>
       )
     }
-    <div class='flex gap-x-2 sm:flex-col'>
-      <span>Copyright</span>
-      <a
-        class='text-sm text-foreground max-sm:place-self-center'
-        href='https://creativecommons.org/licenses/by/4.0/'
-        target='_blank'
-      >
-        CC BY-NC-SA 4.0
-      </a>
-    </div>
   </div>
 
   {/* functions */}
@@ -109,17 +99,6 @@ const shares = {
   </div>
 </div>
 
-<div class='mx-6 rounded-b-xl border border-t-0 px-3 pb-1.5 pt-1 sm:mx-8 sm:px-4'>
-  <a
-    href='/projects#sponsorship'
-    class='flex items-center justify-between text-muted-foreground no-underline'
-    target='_blank'
-  >
-    <span>Buy me a cup of coffee ☕.</span>
-    <Icon class='box-content size-5 p-1' name='receive-money' />
-  </a>
-</div>
-
 <style>
   #qrcode-container.expanded {
     max-height: 11rem;
@@ -131,12 +110,20 @@ const shares = {
 <script>
   import { showToast } from '../../utils'
 
+  function getLocale() {
+    return document.documentElement.getAttribute('data-locale') === 'en-US' ? 'en-US' : 'zh-CN'
+  }
+
+  function getCopiedMessage() {
+    return getLocale() === 'en-US' ? 'Link copied!' : '链接已复制！'
+  }
+
   // Copy link
   const copyLink = document.getElementById('copy-link')
   copyLink?.addEventListener('click', () => {
     navigator.clipboard.writeText(window.location.href)
     // Show toast
-    showToast({ message: 'Link copied!' })
+    showToast({ message: getCopiedMessage() })
   })
 
   // QRCode

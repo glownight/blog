@@ -1,7 +1,9 @@
 ---
-import { Footer, Header, ThemeProvider } from 'astro-pure/components/basic'
+import { Header, ThemeProvider } from 'astro-pure/components/basic'
 import type { SiteMeta } from 'astro-pure/types'
 import BaseHead from '@/components/BaseHead.astro'
+import Footer from '@/components/basic/Footer.astro'
+import LocaleSwitcher from '@/components/i18n/LocaleSwitcher.astro'
 import config from '@/site-config'
 
 // Import the global.css file here so that it is included on
@@ -23,6 +25,16 @@ const {
 <html lang={config.locale.lang}>
   <head>
     <BaseHead {articleDate} {description} {ogImage} {title} />
+    <script is:inline>
+      try {
+        const locale = localStorage.getItem('site-locale')
+        if (locale) {
+          document.documentElement.lang = locale.startsWith('en') ? 'en-US' : 'zh-CN'
+        }
+      } catch {
+        // Ignore storage errors.
+      }
+    </script>
     <ThemeProvider />
   </head>
 
@@ -37,6 +49,7 @@ const {
       )
     }
     <div class='w-full max-w-[70rem] px-4 sm:px-7 lg:px-10 min-h-[100dvh] flex flex-col justify-between'>
+      <LocaleSwitcher />
       <Header />
       <div class="flex-1 w-full">
         <slot />

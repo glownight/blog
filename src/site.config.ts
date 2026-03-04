@@ -1,4 +1,4 @@
-import type { CardListData, Config, IntegrationUserConfig, ThemeUserConfig } from 'astro-pure/types';
+import type { Config, IntegrationUserConfig, ThemeUserConfig } from 'astro-pure/types'
 
 
 
@@ -7,20 +7,19 @@ import type { CardListData, Config, IntegrationUserConfig, ThemeUserConfig } fro
 export const theme: ThemeUserConfig = {
   // === Basic configuration ===
   /** Title for your website. Will be used in metadata and as browser tab title. */
-  title: "Arthals' ink",
+  title: "glownight",
   /** Will be used in index page & copyright declaration */
-  author: 'Arthals',
-  since: 2024,
+  author: 'glownight',
   /** Description metadata for your website. Can be used in page metadata. */
-  description: '所见高山远木，阔云流风；所幸岁月盈余，了无拘束',
+  description: 'glownight',
   /** The default favicon for your site which should be a path to an image in the `public/` directory. */
-  favicon: '/favicon/favicon.ico',
+  favicon: '/favicon/favicon.svg',
   /** Specify the default language for this site. */
   locale: {
-    lang: 'en-US',
-    attrs: 'en_US',
+    lang: 'zh-CN',
+    attrs: 'zh_CN',
     // Date locale
-    dateLocale: 'en-US',
+    dateLocale: 'zh-CN',
     dateOptions: {
       day: 'numeric',
       month: 'short',
@@ -29,8 +28,8 @@ export const theme: ThemeUserConfig = {
   },
   /** Set a logo image to show in the homepage. */
   logo: {
-    src: 'src/assets/avatar.jpg',
-    alt: 'Avatar'
+    src: '/icons/code.svg',
+    alt: 'Logo'
   },
 
   // === Global configuration ===
@@ -43,7 +42,7 @@ export const theme: ThemeUserConfig = {
     /* Telegram channel */
     // {
     //   tag: 'meta',
-    //   attrs: { name: 'telegram:channel', content: '@cworld0_cn' },
+    //   attrs: { name: 'telegram:channel', content: '@glownight' },
     //   content: ''
     // }
   ],
@@ -52,35 +51,29 @@ export const theme: ThemeUserConfig = {
   /** Configure the header of your site. */
   header: {
     menu: [
-      { title: 'Blog', link: '/blog' },
-      { title: 'Projects', link: '/projects' },
-      { title: 'Links', link: '/links' },
-      { title: 'About', link: '/about' }
+      { title: '博客', link: '/blog' },
+      { title: '项目', link: '/projects' },
+      { title: '关于', link: '/about' }
     ]
   },
 
   /** Configure the footer of your site. */
   footer: {
     // Year format
-    year: `© ${new Date().getFullYear()}`,
+    year: '© 2024',
     // year: `© 2019 - ${new Date().getFullYear()}`,
     links: [
       // Registration link
-      {
-        title: '京ICP备2022002869号-2',
-        link: 'https://beian.miit.gov.cn/',
-        style: 'text-xs text-muted-foreground' // Uno/TW CSS class
-      },
-      {
-        title: '萌ICP备20254869号',
-        link: 'https://icp.gov.moe/?keyword=20254869',
-        style: 'text-xs text-muted-foreground' // Uno/TW CSS class
-      }
+      // {
+      //   title: 'Your ICP Number',
+      //   link: 'https://beian.miit.gov.cn/',
+      //   style: 'text-xs text-muted-foreground' // Uno/TW CSS class
+      // }
     ],
-    /** Enable displaying a “Astro & Pure theme powered” link in your site’s footer. */
+    /** Enable displaying a "Astro & Pure theme powered" link in your site's footer. */
     credits: false,
     /** Optional details about the social media accounts for this site. */
-    social: { github: 'https://github.com/zhuozhiyongde', email: 'mailto:zhuozhiyongde@126.com' }
+    social: { github: 'https://github.com/glownight', email: 'mailto:misswalden@qq.com' }
   },
 
   content: {
@@ -109,11 +102,9 @@ export const integ: IntegrationUserConfig = {
     applyTip: [
       { name: 'Name', val: theme.title },
       { name: 'Desc', val: theme.description || 'Null' },
-      { name: 'Link', val: 'https://arthals.ink/' },
-      { name: 'Avatar', val: 'https://cdn.arthals.ink/Arthals.png' }
-    ],
-    // Cache avatars in `public/avatars/` to improve user experience.
-    cacheAvatar: false,
+      { name: 'Link', val: 'https://glownight.com/' },
+      { name: 'Avatar', val: 'https://glownight.com/avatar.png' }
+    ]
   },
   // Enable page search function
   pagefind: true,
@@ -147,22 +138,7 @@ export const integ: IntegrationUserConfig = {
   },
   // Comment system
   waline: {
-    enable: true,
-    // Server service link
-    server: 'https://waline.arthals.ink',
-    // Refer https://waline.js.org/en/guide/features/emoji.html
-    emoji: ['bmoji', 'weibo'],
-    // Refer https://waline.js.org/en/reference/client/props.html
-    additionalConfigs: {
-      // search: false,
-      pageview: true,
-      comment: true,
-      locale: {
-        reaction0: 'Like',
-        placeholder: 'Welcome to comment. (Email to receive replies. Login is unnecessary)'
-      },
-      imageUploader: false
-    }
+    enable: false
   }
 }
 
