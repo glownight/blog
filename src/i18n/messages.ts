@@ -78,9 +78,9 @@ export const MESSAGES = {
     // About
     'about.title': '关于',
     'about.headingProfile': '我是谁',
-    'about.profileIntro': '目前主要做全栈开发，日常会结合 AI 提升开发效率，也会一些 C++。',
+    'about.profileIntro': '目前主要做全栈开发，日常会结合 AI 提升开发效率。',
     'about.headingBlog': '关于这个站点',
-    'about.blogIntro': '这个站点主要记录全栈开发实践、AI 辅助开发经验，以及部分 C++ 学习与项目。',
+    'about.blogIntro': '这个站点主要记录全栈开发实践、AI 开发经验。',
 
     // Links
     'links.title': '友链',
