@@ -3,10 +3,6 @@ title: 长任务优化（Long Tasks）
 publishDate: 2026-03-03
 tags:
   - 性能优化
-  - Core Web Vitals
-  - JavaScript
-  - 长任务
-  - Web Workers
 language: zh-CN
 ---
 
